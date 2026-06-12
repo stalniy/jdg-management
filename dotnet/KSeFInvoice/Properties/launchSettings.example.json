@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "KSeFInvoice": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "KSEF_ENV": "PROD",
+        "KSEF_PRIVATE_KEY_PASSWORD": "xxxxxxxx",
+        "KSEF_PRIVATE_KEY_PATH": "./certs/ksef.key",
+        "KSEF_PUBLIC_KEY_PATH": "./certs/ksef.crt"
+      }
+    }
+  }
+}

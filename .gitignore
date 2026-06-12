@@ -1,0 +1,10 @@
+certs/
+invoices/
+example.*
+launchSettings.json
+
+.DS_Store
+node_modules/
+
+dotnet/*/bin
+dotnet/*/obj
