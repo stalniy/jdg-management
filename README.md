@@ -10,7 +10,7 @@ Place invoice input files under subfolders inside `invoices/`.
 
 Accepted input formats:
 
-- `.xml` as a ready-to-submit KSeF invoice
+- `.xml` as a ready-to-submit KSeF invoice (can be downloaded from https://www.fakturowo.pl/)
 - `.yaml` / `.yml` shaped like `InvoiceData` from `dotnet/KSeFInvoice/Program.cs`
 
 Example layout:
