@@ -74,6 +74,14 @@ try
             };
 
             var submissionResult = await context.Sender.SendAsync(preparedInvoice, context.Options);
+            if (submissionResult.RejectedByKsef)
+            {
+                Console.Error.WriteLine(
+                    $"  Skipping {relativeInputPath} because KSeF returned terminal status {submissionResult.InvoiceStatusCode}: {submissionResult.InvoiceStatusDescription ?? "No description"}");
+                skippedCount++;
+                continue;
+            }
+
             var submissionRecord = new InvoiceSubmissionRecord
             {
                 SourcePath = relativeInputPath,

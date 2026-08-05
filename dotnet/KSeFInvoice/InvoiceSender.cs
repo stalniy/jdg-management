@@ -48,8 +48,22 @@ public class SendInvoiceResult
     public required string VerificationUrl { get; set; }
     public string? KsefNumber { get; set; }
     public string? PollingError { get; set; }
+    public int? InvoiceStatusCode { get; set; }
+    public string? InvoiceStatusDescription { get; set; }
+    public IReadOnlyCollection<string> InvoiceStatusDetails { get; set; } = Array.Empty<string>();
+    public bool RejectedByKsef { get; set; }
     public string? AccessToken { get; set; }
     public string? SessionReferenceNumber { get; set; }
+}
+
+public class KsefInvoiceProcessingResult
+{
+    public string? KsefNumber { get; init; }
+    public int? StatusCode { get; init; }
+    public string? StatusDescription { get; init; }
+    public IReadOnlyCollection<string> StatusDetails { get; init; } = Array.Empty<string>();
+    public string? ErrorMessage { get; init; }
+    public bool RejectedByKsef { get; init; }
 }
 
 public class InvoiceSender
@@ -148,7 +162,38 @@ public class InvoiceSender
         return verificationUrl;
     }
 
-    private async Task<string?> pollForKsefNumberAsync(string referenceNumber, string sessionRef, string accessToken, CancellationToken ct = default)
+    private static bool isTerminalInvoiceFailureStatus(int statusCode)
+    {
+        return statusCode >= 400;
+    }
+
+    private static string formatStatusDetails(IEnumerable<string>? details)
+    {
+        if (details == null)
+            return string.Empty;
+
+        var nonEmptyDetails = details
+            .Where(detail => !string.IsNullOrWhiteSpace(detail))
+            .ToArray();
+
+        return nonEmptyDetails.Length == 0
+            ? string.Empty
+            : string.Join(" ", nonEmptyDetails);
+    }
+
+    private static string formatKsefInvoiceError(int statusCode, string? description, IEnumerable<string>? details)
+    {
+        string normalizedDescription = string.IsNullOrWhiteSpace(description)
+            ? "Unknown KSeF invoice processing error"
+            : description;
+        string formattedDetails = formatStatusDetails(details);
+
+        return string.IsNullOrWhiteSpace(formattedDetails)
+            ? $"status {statusCode}: {normalizedDescription}"
+            : $"status {statusCode}: {normalizedDescription}. {formattedDetails}";
+    }
+
+    private async Task<KsefInvoiceProcessingResult> pollForKsefNumberAsync(string referenceNumber, string sessionRef, string accessToken, CancellationToken ct = default)
     {
         string? ksefNumber = null;
         var maxAttempts = 30;
@@ -160,16 +205,50 @@ public class InvoiceSender
                 .GetSessionInvoiceAsync(sessionRef, referenceNumber, accessToken, ct)
                 ;
 
-            Console.WriteLine($"  Attempt {attempt}/{maxAttempts}: status={invoiceStatus.Status.Code}, ksefNumber={invoiceStatus.KsefNumber ?? "(pending)"}");
+            int statusCode = invoiceStatus.Status.Code;
+            string? statusDescription = invoiceStatus.Status.Description;
+            string[] statusDetails = invoiceStatus.Status.Details?
+                .Where(detail => !string.IsNullOrWhiteSpace(detail))
+                .ToArray()
+                ?? Array.Empty<string>();
+            string ksefNumberDisplay = invoiceStatus.KsefNumber
+                ?? (isTerminalInvoiceFailureStatus(statusCode) ? "(none)" : "(pending)");
+
+            Console.WriteLine($"  Attempt {attempt}/{maxAttempts}: status={statusCode}, ksefNumber={ksefNumberDisplay}");
 
             if (!string.IsNullOrEmpty(invoiceStatus.KsefNumber))
             {
                 ksefNumber = invoiceStatus.KsefNumber;
                 Console.WriteLine($"KSeF number assigned: {ksefNumber}");
-                break;
+                return new KsefInvoiceProcessingResult
+                {
+                    KsefNumber = ksefNumber,
+                    StatusCode = statusCode,
+                    StatusDescription = statusDescription,
+                    StatusDetails = statusDetails,
+                };
+            }
+
+            if (isTerminalInvoiceFailureStatus(statusCode))
+            {
+                string errorMessage = formatKsefInvoiceError(statusCode, statusDescription, statusDetails);
+                Console.Error.WriteLine($"KSeF rejected invoice {referenceNumber}: {errorMessage}");
+
+                return new KsefInvoiceProcessingResult
+                {
+                    StatusCode = statusCode,
+                    StatusDescription = statusDescription,
+                    StatusDetails = statusDetails,
+                    ErrorMessage = errorMessage,
+                    RejectedByKsef = true,
+                };
             }
         }
-        return ksefNumber;
+
+        return new KsefInvoiceProcessingResult
+        {
+            KsefNumber = ksefNumber,
+        };
     }
 
     private async Task<SendInvoiceResponse> sendInvoiceAsync(byte[] invoiceBytes, OnlineSessionScope sessionScope, string accessToken, CancellationToken ct = default)
@@ -241,9 +320,12 @@ public class InvoiceSender
 
         string? ksefNumber = null;
         string? pollingError = null;
+        KsefInvoiceProcessingResult? processingResult = null;
         try
         {
-            ksefNumber = await pollForKsefNumberAsync(sendResponse.ReferenceNumber, sessionScope.ReferenceNumber, accessToken, ct);
+            processingResult = await pollForKsefNumberAsync(sendResponse.ReferenceNumber, sessionScope.ReferenceNumber, accessToken, ct);
+            ksefNumber = processingResult.KsefNumber;
+            pollingError = processingResult.ErrorMessage;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
@@ -257,6 +339,10 @@ public class InvoiceSender
             VerificationUrl = verificationUrl,
             KsefNumber = ksefNumber,
             PollingError = pollingError,
+            InvoiceStatusCode = processingResult?.StatusCode,
+            InvoiceStatusDescription = processingResult?.StatusDescription,
+            InvoiceStatusDetails = processingResult?.StatusDetails ?? Array.Empty<string>(),
+            RejectedByKsef = processingResult?.RejectedByKsef ?? false,
             AccessToken = accessToken,
             SessionReferenceNumber = sessionScope.ReferenceNumber,
         };
