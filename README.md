@@ -81,3 +81,13 @@ The app submits only invoices that do not already have an output PDF or submissi
 ## Test env
 
 to switch to TEST env, just update `KSEF_ENV` in launchSettings.json to `TEST`
+
+## HOW to
+
+To download DRA:
+1. Open e-ZUS and login
+2. Go to e-Płatnik tab > Dokumenty wysłane
+
+To download UPP for DRA:
+1. Go to DRA (follow instruction above)
+2. Select DRA and click on Podgląd poświadczenia przedłożenia > Drukuj
