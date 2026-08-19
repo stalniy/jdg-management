@@ -78,6 +78,38 @@ dotnet run --project dotnet/KSeFInvoice/KSeFInvoice.csproj
 
 The app submits only invoices that do not already have an output PDF or submission sidecar.
 
+## Generate ewidencja przychodów
+
+Generate a monthly printable ewidencja PDF from YAML invoices, KSeF submission sidecars, and matching confirmation PDFs:
+
+```bash
+dotnet run --project dotnet/KSeFInvoice/KSeFInvoice.csproj -- ewidencja --month 2026-07
+```
+
+For each invoice in `invoices/yyyy-MM`, the command expects:
+
+- `{invoice}.yaml`
+- `{invoice}.ksef-submission.json`
+- a matching `*Potwierdzenie*.pdf`
+
+Invoice service rows use YAML `SaleDate` for both `Data wpisu` and `Data uzyskania przychodu`; foreign-currency service revenue is converted with the NBP average rate from the last published working day preceding `SaleDate`. The PDF text layer is parsed for `Data transakcji` only to generate `Różnica kursowa` rows.
+
+For foreign-currency invoices, `Różnica kursowa` rows are calculated automatically from:
+
+- the invoice amount in YAML
+- `Data transakcji` from the confirmation PDF
+- the NBP average rate from the last published working day preceding `Data transakcji`
+- the exchange rate stored in `{invoice}.ksef-submission.json`
+
+The RKUR document number is generated from the invoice number by default. Override it in YAML when you need to match an accountant-provided sequence:
+
+```yaml
+Payment:
+  FormaPlatnosci: 6
+  BankAccount: PLXXX
+  ExchangeDifferenceDocumentNumber: RKUR/9/2026/USD
+```
+
 ## Test env
 
 to switch to TEST env, just update `KSEF_ENV` in launchSettings.json to `TEST`

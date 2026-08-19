@@ -29,6 +29,7 @@ public class PaymentInfo
 {
     public required int FormaPlatnosci { get; set; }
     public string? BankAccount { get; set; }
+    public string? ExchangeDifferenceDocumentNumber { get; set; }
 }
 
 public class InvoiceExchangeRate

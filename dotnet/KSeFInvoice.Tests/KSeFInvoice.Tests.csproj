@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="PuppeteerSharp" Version="24.40.0" />
+    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
@@ -17,13 +19,18 @@
 
   <ItemGroup>
     <Compile Include="..\KSeFInvoice\ExchangeRateService.cs" Link="Production\ExchangeRateService.cs" />
+    <Compile Include="..\KSeFInvoice\EwidencjaGenerator.cs" Link="Production\EwidencjaGenerator.cs" />
+    <Compile Include="..\KSeFInvoice\EwidencjaHtmlGenerator.cs" Link="Production\EwidencjaHtmlGenerator.cs" />
+    <Compile Include="..\KSeFInvoice\EwidencjaModels.cs" Link="Production\EwidencjaModels.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceHtmlGenerator.cs" Link="Production\InvoiceHtmlGenerator.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceInputService.cs" Link="Production\InvoiceInputService.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceMath.cs" Link="Production\InvoiceMath.cs" />
+    <Compile Include="..\KSeFInvoice\InvoicePdfGenerator.cs" Link="Production\InvoicePdfGenerator.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceProcessingModels.cs" Link="Production\InvoiceProcessingModels.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceXmlBuilder.cs" Link="Production\InvoiceXmlBuilder.cs" />
     <Compile Include="..\KSeFInvoice\InvoiceXmlExchangeRateUpdater.cs" Link="Production\InvoiceXmlExchangeRateUpdater.cs" />
     <Compile Include="..\KSeFInvoice\Models.cs" Link="Production\Models.cs" />
+    <Compile Include="..\KSeFInvoice\PdfTransactionDateExtractor.cs" Link="Production\PdfTransactionDateExtractor.cs" />
   </ItemGroup>
 
   <ItemGroup>

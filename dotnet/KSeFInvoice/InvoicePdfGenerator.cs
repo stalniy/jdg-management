@@ -3,10 +3,16 @@ using PuppeteerSharp.Media;
 
 namespace KSeFInvoice;
 
+public sealed class PdfGenerationOptions
+{
+    public bool Landscape { get; init; }
+}
+
 public static class InvoicePdfGenerator
 {
-    public static async Task GenerateAsync(string html, string outputPath)
+    public static async Task GenerateAsync(string html, string outputPath, PdfGenerationOptions? options = null)
     {
+        options ??= new PdfGenerationOptions();
         string? directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrWhiteSpace(directory))
             Directory.CreateDirectory(directory);
@@ -20,6 +26,7 @@ public static class InvoicePdfGenerator
         await page.PdfAsync(outputPath, new PdfOptions
         {
             Format = PaperFormat.A4,
+            Landscape = options.Landscape,
             PrintBackground = true,
             MarginOptions = new PuppeteerSharp.Media.MarginOptions
             {

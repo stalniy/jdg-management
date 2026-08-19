@@ -66,6 +66,40 @@ public sealed class ExchangeRateServiceTests
         Assert.Contains("did not include any rates", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task GetAverageRateForDayBeforeAsync_UsesPrecedingWorkingDay()
+    {
+        var handler = new FixtureNbpHandler(("2026-07-09", HttpStatusCode.OK, 3.7692m));
+        var service = new ExchangeRateService(new HttpClient(handler));
+
+        var rate = await service.GetAverageRateForDayBeforeAsync("USD", new DateOnly(2026, 7, 10));
+
+        Assert.Equal("2026-07-09", rate.EffectiveDate);
+        Assert.Equal(3.7692m, rate.Rate);
+        Assert.Equal("/api/exchangerates/rates/a/USD/2026-07-09/", handler.RequestPaths[0]);
+    }
+
+    [Fact]
+    public async Task GetAverageRateForDayBeforeAsync_FallsBackOverWeekendOrHoliday()
+    {
+        var handler = new FixtureNbpHandler(
+            ("2026-07-26", HttpStatusCode.NotFound, 0m),
+            ("2026-07-25", HttpStatusCode.NotFound, 0m),
+            ("2026-07-24", HttpStatusCode.OK, 3.8m));
+        var service = new ExchangeRateService(new HttpClient(handler));
+
+        var rate = await service.GetAverageRateForDayBeforeAsync("USD", new DateOnly(2026, 7, 27));
+
+        Assert.Equal("2026-07-24", rate.EffectiveDate);
+        Assert.Equal(
+            [
+                "/api/exchangerates/rates/a/USD/2026-07-26/",
+                "/api/exchangerates/rates/a/USD/2026-07-25/",
+                "/api/exchangerates/rates/a/USD/2026-07-24/",
+            ],
+            handler.RequestPaths);
+    }
+
     private sealed class FixtureNbpHandler(params (string Date, HttpStatusCode StatusCode, decimal? Rate)[] responses) : HttpMessageHandler
     {
         private readonly Dictionary<string, (HttpStatusCode StatusCode, decimal? Rate)> _responses =

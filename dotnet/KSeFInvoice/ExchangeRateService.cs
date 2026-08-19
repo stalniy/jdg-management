@@ -3,7 +3,12 @@ using System.Text.Json;
 
 namespace KSeFInvoice;
 
-public sealed class ExchangeRateService(HttpClient httpClient)
+public interface IExchangeRateProvider
+{
+    Task<InvoiceExchangeRate> GetAverageRateForDayBeforeAsync(string currency, DateOnly date, CancellationToken ct = default);
+}
+
+public sealed class ExchangeRateService(HttpClient httpClient) : IExchangeRateProvider
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -22,8 +27,13 @@ public sealed class ExchangeRateService(HttpClient httpClient)
         }
 
         DateOnly saleDate = InvoiceMath.ParseDate(InvoiceMath.GetSaleDate(invoiceData), "SaleDate");
-        DateOnly queryDate = saleDate.AddDays(-1);
+        invoiceData.ExchangeRate = await GetAverageRateForDayBeforeAsync(currency, saleDate, ct);
+    }
 
+    public async Task<InvoiceExchangeRate> GetAverageRateForDayBeforeAsync(string currency, DateOnly date, CancellationToken ct = default)
+    {
+        currency = currency.Trim().ToUpperInvariant();
+        DateOnly queryDate = date.AddDays(-1);
         for (int offset = 0; offset < 14; offset++)
         {
             DateOnly candidateDate = queryDate.AddDays(-offset);
@@ -42,19 +52,17 @@ public sealed class ExchangeRateService(HttpClient httpClient)
             var rate = payload.Rates.FirstOrDefault()
                 ?? throw new InvalidOperationException($"NBP response for {currency} on {candidateDate:yyyy-MM-dd} did not include any rates.");
 
-            invoiceData.ExchangeRate = new InvoiceExchangeRate
+            return new InvoiceExchangeRate
             {
                 Currency = currency,
                 Table = rate.No,
                 EffectiveDate = rate.EffectiveDate,
                 Rate = rate.Mid,
             };
-
-            return;
         }
 
         throw new InvalidOperationException(
-            $"Could not find an NBP exchange rate for {currency} before {saleDate:yyyy-MM-dd}. Tried 14 calendar days.");
+            $"Could not find an NBP exchange rate for {currency} before {date:yyyy-MM-dd}. Tried 14 calendar days.");
     }
 
     private sealed class NbpExchangeRateResponse

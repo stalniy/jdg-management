@@ -372,5 +372,6 @@ public sealed class InvoiceInputService
 
         if (data.LineItems == null || data.LineItems.Count == 0)
             throw new InvalidOperationException($"Invoice '{sourcePath}' must contain at least one line item.");
+
     }
 }

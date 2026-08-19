@@ -10,6 +10,28 @@ var inputService = new InvoiceInputService();
 using var httpClient = new HttpClient();
 var exchangeRateService = new ExchangeRateService(httpClient);
 
+if (args.Length > 0)
+{
+    if (string.Equals(args[0], "ewidencja", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            await RunEwidencjaAsync(args.Skip(1).ToArray());
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to generate ewidencja: {ex.Message}");
+            Environment.ExitCode = 1;
+        }
+
+        return;
+    }
+
+    Console.Error.WriteLine($"Unknown command '{args[0]}'.");
+    Environment.ExitCode = 1;
+    return;
+}
+
 var invoiceFiles = inputService.DiscoverInputFiles(invoicesRootPath);
 if (invoiceFiles.Count == 0)
 {
@@ -123,6 +145,61 @@ if (failedCount > 0)
     Environment.ExitCode = 1;
 
 return;
+
+async Task RunEwidencjaAsync(string[] commandArgs)
+{
+    DateOnly month = ParseMonth(commandArgs);
+    var generator = new EwidencjaGenerator(
+        inputService,
+        new PdfTransactionDateExtractor(),
+        exchangeRateService);
+
+    var result = await generator.GenerateAsync(invoicesRootPath, month);
+    string relativeOutputPath = Path.GetRelativePath(Directory.GetCurrentDirectory(), result.OutputPath);
+
+    Console.WriteLine($"Generated ewidencja PDF: {relativeOutputPath}");
+    Console.WriteLine($"Rows: {result.Document.Entries.Count}");
+    Console.WriteLine($"Total revenue: {InvoiceMath.FormatPolishAmount(result.Document.TotalRevenue)} PLN");
+
+    if (result.MissingCurrencyDifferenceData.Count == 0)
+        return;
+
+    Console.WriteLine();
+    Console.WriteLine("Currency-difference rows were not generated for invoice(s) missing settlement data:");
+    foreach (string missing in result.MissingCurrencyDifferenceData)
+        Console.WriteLine($"  {missing}");
+}
+
+DateOnly ParseMonth(string[] commandArgs)
+{
+    for (int i = 0; i < commandArgs.Length; i++)
+    {
+        if (!string.Equals(commandArgs[i], "--month", StringComparison.OrdinalIgnoreCase))
+            continue;
+
+        if (i + 1 >= commandArgs.Length)
+            throw new InvalidOperationException("Missing value for --month. Expected yyyy-MM.");
+
+        return ParseMonthValue(commandArgs[i + 1]);
+    }
+
+    throw new InvalidOperationException("Missing --month argument. Example: ewidencja --month 2026-07.");
+}
+
+DateOnly ParseMonthValue(string value)
+{
+    if (DateOnly.TryParseExact(
+        $"{value}-01",
+        "yyyy-MM-dd",
+        System.Globalization.CultureInfo.InvariantCulture,
+        System.Globalization.DateTimeStyles.None,
+        out var parsed))
+    {
+        return parsed;
+    }
+
+    throw new InvalidOperationException($"Month must use yyyy-MM format. Received '{value}'.");
+}
 
 async Task GeneratePdfAsync(InvoiceData invoiceData, InvoiceSubmissionRecord submissionRecord, string pdfPath)
 {
