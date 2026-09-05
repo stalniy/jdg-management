@@ -112,6 +112,14 @@ Payment:
 
 ## Test env
 
+Run the test suite with restore enabled, especially from a clean checkout:
+
+```bash
+dotnet test dotnet/KSeFInvoice.Tests/KSeFInvoice.Tests.csproj
+```
+
+Use `--no-restore` only after the test project has already been restored; otherwise .NET may only build the project without invoking the test runner.
+
 to switch to TEST env, just update `KSEF_ENV` in launchSettings.json to `TEST`
 
 ## HOW to
@@ -123,3 +131,12 @@ To download DRA:
 To download UPP for DRA:
 1. Go to DRA (follow instruction above)
 2. Select DRA and click on Podgląd poświadczenia przedłożenia > Drukuj
+
+Create new DRA:
+1. Open e-Płatnik > Kreatory > Obsługa rozliczenia > Dalej
+2. Nowy komplet rozliczeniowy na podstawie danych z poprzedniego miesiąca
+3. Field wypadkowe for preferencyjnego ZUS should be as emerytalne/rentowe.
+4. Oblicz
+5. Fundusz Pracy > Anuluj
+6. Wylicz > Weryfikuj (verification status - Brak is ok)
+7. Podgląd > Wyślij i zakończ
