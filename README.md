@@ -140,3 +140,6 @@ Create new DRA:
 5. Fundusz Pracy > Anuluj
 6. Wylicz > Weryfikuj (verification status - Brak is ok)
 7. Podgląd > Wyślij i zakończ
+
+Calculate fee:
+fee = 0.12 * (income - społeczne - 0.5 * zdrowotne)
